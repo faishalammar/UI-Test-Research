@@ -89,7 +89,7 @@ class FilmListAdapter(val appContext: Context): PagedListAdapter<MoviesAndTvShow
         newLL.layoutParams = holder.genreContainer.layoutParams
 
 
-        for((textViewId, genre) in film.genre?.withIndex()!!){
+        for((textViewId, genre) in film.genre.withIndex()){
 
             genreTextLength += genre.length
 
@@ -117,9 +117,6 @@ class FilmListAdapter(val appContext: Context): PagedListAdapter<MoviesAndTvShow
 
 
             }
-
-
-
 
         }
 
@@ -150,7 +147,6 @@ class FilmListAdapter(val appContext: Context): PagedListAdapter<MoviesAndTvShow
         var genreContainer : LinearLayout = binding.genreLinearLayout
         var genreContainerBox : LinearLayout = binding.genreLinearLayoutBox
         var favButton : ImageButton = binding.favButton
-
     }
 
     interface OnItemClickCallback {
