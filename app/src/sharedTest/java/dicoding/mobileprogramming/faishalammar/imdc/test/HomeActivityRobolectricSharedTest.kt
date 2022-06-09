@@ -1,19 +1,15 @@
 package dicoding.mobileprogramming.faishalammar.imdc.test
 
-import android.graphics.Movie
-import android.os.Build
-import android.os.Bundle
+import android.os.*
 import android.util.Log
 import android.view.View
+import androidx.paging.PageKeyedDataSource
 import androidx.paging.PagedList
 import androidx.recyclerview.widget.RecyclerView
 import androidx.test.core.app.ActivityScenario
-import androidx.test.core.app.ActivityScenario.ActivityAction
-import androidx.test.espresso.Espresso.onIdle
 import androidx.test.espresso.Espresso.onView
 import androidx.test.espresso.action.ViewActions.*
 import androidx.test.espresso.assertion.ViewAssertions.matches
-import androidx.test.espresso.contrib.RecyclerViewActions
 import androidx.test.espresso.matcher.ViewMatchers.*
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.android.material.tabs.TabLayout
@@ -31,31 +27,16 @@ import org.robolectric.annotation.*
 import androidx.test.espresso.contrib.RecyclerViewActions.actionOnItemAtPosition
 
 import androidx.test.espresso.*
+import androidx.test.espresso.Espresso.registerIdlingResources
 
 import androidx.test.espresso.IdlingRegistry
-import dicoding.mobileprogramming.faishalammar.imdc.data.FakeMoviesSeriesRepository
-import dicoding.mobileprogramming.faishalammar.imdc.data.source.local.LocalDataSource
+import androidx.test.espresso.idling.CountingIdlingResource
 import dicoding.mobileprogramming.faishalammar.imdc.data.source.local.entity.MoviesAndTvShowsEntity
-import dicoding.mobileprogramming.faishalammar.imdc.data.source.remote.RemoteDataSource
-import dicoding.mobileprogramming.faishalammar.imdc.data.source.remote.response.MovieResponse
-import dicoding.mobileprogramming.faishalammar.imdc.data.source.remote.response.TvSeriesResponse
 import dicoding.mobileprogramming.faishalammar.imdc.ui.adapter.FilmListAdapter
-import dicoding.mobileprogramming.faishalammar.imdc.utils.AppExecutors
 import dicoding.mobileprogramming.faishalammar.imdc.utils.DataDummy
 import org.mockito.ArgumentMatchers
 import org.mockito.Mockito
-
-
-
-
-
-
-
-
-
-
-
-
+import java.util.concurrent.Executor
 
 
 @Config(
@@ -65,7 +46,6 @@ import org.mockito.Mockito
 )
 @RunWith(AndroidJUnit4::class)
 class HomeActivityRobolectricSharedTest{
-
 
     private val robot = Robot()
 
@@ -92,6 +72,10 @@ class HomeActivityRobolectricSharedTest{
     fun loadDetailMovie() {
         RUN_UI_TEST(robot){
             GIVEN { createHomeActivity() }
+            THEN {
+                val idlingResource = CountingIdlingResource("Loader")
+                IdlingRegistry.getInstance().register(idlingResource)
+            }
             THEN { onView(withId(R.id.rv_movie)).perform(actionOnItemAtPosition<RecyclerView.ViewHolder>(0, click())) }
             THEN { onView(withId(R.id.film_detail_title)).check(matches(isDisplayed())) }
             THEN { onView(withId(R.id.film_description_detail)).check(matches(isDisplayed())) }
@@ -117,6 +101,11 @@ class HomeActivityRobolectricSharedTest{
         RUN_UI_TEST(robot){
             GIVEN { createHomeActivity() }
             THEN { onView(withId(R.id.page_2)).perform(click()) }
+            THEN {
+                val idlingResource = CountingIdlingResource("Loader")
+                IdlingRegistry.getInstance().register(idlingResource)
+            }
+            THEN { onView(withId(R.id.rv_series)).check(matches(isDisplayed())) }
             AND { onView(withId(R.id.rv_series)).perform(actionOnItemAtPosition<RecyclerView.ViewHolder>(0, click())) }
             THEN {
                 onView(withId(R.id.film_detail_title)).check(matches(isDisplayed()))
@@ -151,13 +140,15 @@ class HomeActivityRobolectricSharedTest{
     @Test
     fun addAndDeleteFavouriteMovies() {
         RUN_UI_TEST(robot){
-            GIVEN { createHomeActivity() }
+            GIVEN {
+                createHomeActivity()
+            }
             WHEN { backToListFavouriteMovie() }
-            THEN { val currentFavMovie = countRecyclerViewItem(R.id.rv_fav_movie)
+            THEN {
+                val currentFavMovie = countRecyclerViewItem(R.id.rv_fav_movie)
                 Log.d("current fav movie : ", currentFavMovie.toString())
 
                 backToListMovieAndClickLoveButton()
-
                 backToListFavouriteMovie()
 
                 val newFavMovieNumber = countRecyclerViewItem(R.id.rv_fav_movie)
@@ -188,7 +179,6 @@ class HomeActivityRobolectricSharedTest{
 
     @Test
     fun addAndDeleteFavouriteSeries() {
-
         RUN_UI_TEST(robot){
             GIVEN { createHomeActivity() }
             WHEN { backToListFavouriteSeries() }
@@ -225,22 +215,11 @@ class HomeActivityRobolectricSharedTest{
     }
 
 
-
     private class Robot: BaseRobot() {
 
         var activityScenario: ActivityScenario<HomeActivity>? = null
 
-//        private val remote = Mockito.mock(RemoteDataSource::class.java)
-//        private val local = Mockito.mock(LocalDataSource::class.java)
-//        private val appExecutors = Mockito.mock(AppExecutors::class.java)
-//
-//        private val repository = FakeMoviesSeriesRepository(remote, local, appExecutors)
-
-        private val movieForTest : MovieResponse = DataDummy.generateRemoteDummyMovies()[0]
-        private val seriesForTest : TvSeriesResponse = DataDummy.generateRemoteDummySeries()[0]
-        private val listMovieResponse : ArrayList<MovieResponse> = DataDummy.generateRemoteDummyMovies()
-        private val listSeriesResponse : ArrayList<TvSeriesResponse> = DataDummy.generateRemoteDummySeries()
-
+        @Before
         override fun setup() {
             IdlingRegistry.getInstance().register(EspressoIdlingResource.idlingResource)
         }
@@ -257,22 +236,30 @@ class HomeActivityRobolectricSharedTest{
 
         fun backToListMovieAndClickLoveButton(){
             onView(withId(R.id.page_1)).perform(click())
+//            addDummyFilmToRVAdapter()
+            val idlingResource = CountingIdlingResource("Loader")
+            IdlingRegistry.getInstance().register(idlingResource)
             onView(withId(R.id.rv_movie)).perform(actionOnItemAtPosition<RecyclerView.ViewHolder>(0, clickChildViewWithId(R.id.fav_button)));
         }
 
         fun backToListSeriesAndClickLoveButton(){
             onView(withId(R.id.page_2)).perform(click())
+            addDummyFilmToRVAdapter(false)
+            val idlingResource = CountingIdlingResource("Loader")
+            IdlingRegistry.getInstance().register(idlingResource)
             onView(withId(R.id.rv_series)).perform(actionOnItemAtPosition<RecyclerView.ViewHolder>(0, clickChildViewWithId(R.id.fav_button)));
         }
 
         fun backToListFavouriteMovie(){
             onView(withId(R.id.page_3)).perform(click())
+            updateRecyclerViewMeasurement(R.id.rv_fav_movie)
             onView(withId(R.id.rv_fav_movie)).check(matches(isDisplayed()))
         }
 
         fun backToListFavouriteSeries(){
             onView(withId(R.id.page_3)).perform(click())
             onView(withId(R.id.tabs)).perform(selectTabAtPosition(1))
+            updateRecyclerViewMeasurement(R.id.rv_fav_series)
             onView(withId(R.id.rv_fav_series)).check(matches(isDisplayed()))
         }
 
@@ -322,6 +309,35 @@ class HomeActivityRobolectricSharedTest{
             return item
         }
 
+        fun addDummyFilmToRVAdapter(isMovie : Boolean = true) {
+            activityScenario?.onActivity { activity ->
+                val recyclerView = activity.findViewById(if (isMovie) R.id.rv_movie else R.id.rv_series) as RecyclerView
+                val adapter = recyclerView.adapter as FilmListAdapter
+
+                val listDummyFilm : ArrayList<MoviesAndTvShowsEntity> = DataDummy.generateDummyMovies()
+                val dummyPagedListFilm = PagedListUtil.transformListItem(listDummyFilm)
+                adapter.submitList(dummyPagedListFilm)
+                adapter.notifyDataSetChanged()
+
+                recyclerView.measure(
+                    View.MeasureSpec.UNSPECIFIED,
+                    View.MeasureSpec.UNSPECIFIED
+                )
+                recyclerView.layout(0, 0, 1000, 1000)
+            }
+        }
+
+        fun updateRecyclerViewMeasurement(Rvid : Int) {
+            activityScenario?.onActivity { activity ->
+                val recyclerView = activity.findViewById(Rvid) as RecyclerView
+                    recyclerView.measure(
+                    View.MeasureSpec.UNSPECIFIED,
+                    View.MeasureSpec.UNSPECIFIED
+                )
+                recyclerView.layout(0, 0, 1000, 1000)
+            }
+        }
+
         fun waitFor(delay: Long): ViewAction {
             return object : ViewAction {
                 override fun getConstraints(): Matcher<View> = isRoot()
@@ -333,16 +349,42 @@ class HomeActivityRobolectricSharedTest{
         }
 
         object PagedListUtil {
+            fun transformListItem(items : ArrayList<MoviesAndTvShowsEntity>): PagedList<MoviesAndTvShowsEntity> {
+                val config = PagedList.Config.Builder()
+                    .setPageSize(items.size)
+                    .setEnablePlaceholders(false)
+                    .setInitialLoadSizeHint(items.size)
+                    .build()
 
-            fun <T> mockPagedList(list: List<T>): PagedList<*> {
-                val pagedList = Mockito.mock(PagedList::class.java) as PagedList<*>
-                Mockito.`when`(pagedList[ArgumentMatchers.anyInt()]).then { invocation ->
-                    val index = invocation.arguments.first() as Int
-                    list[index]
-                }
-                Mockito.`when`(pagedList.size).thenReturn(list.size)
+                val pagedList = PagedList.Builder(ListDataSource(items),config)
+                    .setNotifyExecutor (UiThreadExecutor ())
+                    .setFetchExecutor (AsyncTask.THREAD_POOL_EXECUTOR)
+                    .build ()
 
                 return pagedList
+            }
+
+
+
+            class UiThreadExecutor: Executor {
+                private val handler = Handler (Looper.getMainLooper ())
+                override fun execute (command: Runnable) {
+                    handler.post (command)
+                }
+            }
+
+            class ListDataSource (private val items: List<MoviesAndTvShowsEntity>): PageKeyedDataSource<Int, MoviesAndTvShowsEntity>() {
+                override fun loadInitial(params: LoadInitialParams<Int>, callback: LoadInitialCallback<Int, MoviesAndTvShowsEntity>) {
+                    callback.onResult (items, 0, items.size)
+                }
+
+                override fun loadAfter(params: LoadParams<Int>, callback: LoadCallback<Int, MoviesAndTvShowsEntity>) {
+
+                }
+
+                override fun loadBefore(params: LoadParams<Int>, callback: LoadCallback<Int, MoviesAndTvShowsEntity>) {
+
+                }
             }
         }
 
